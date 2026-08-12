@@ -1,0 +1,81 @@
+const { callMcpTool } = require('./mcpClient');
+const { runTransaction } = require('../brickkenClient');
+const db = require('../store');
+const { sendTelegramAlert } = require('../notify/telegram');
+const { sendEmail } = require('../notify/email');
+
+async function reclaimExpiredTickets() {
+  const now = new Date();
+    const events = db.get('events').value();
+
+      for (const event of events) {
+          if (!event.endsAt || new Date(event.endsAt) > now) continue;
+
+              const expiredTickets = db.get('tickets')
+                    .filter({ eventId: event.id, status: 'issued' })
+                          .value();
+
+                              if (expiredTickets.length === 0) continue;
+
+                                  const canRun = await callMcpTool('rams_can_execute', {
+                                        agentAddress: process.env.AGENT_ADDRESS,
+                                              action: 'reclaim_unused_tickets'
+                                                  });
+
+                                                      if (!canRun || canRun.allowed === false) {
+                                                            console.log(`Agent not authorized to reclaim for ${event.name} right now`);
+                                                                  continue;
+                                                                      }
+
+                                                                          for (const ticket of expiredTickets) {
+                                                                                try {
+                                                                                        await callMcpTool('rams_execute', {
+                                                                                                  agentAddress: process.env.AGENT_ADDRESS,
+                                                                                                            action: 'reclaim_unused_tickets',
+                                                                                                                      context: { ticketId: ticket.id, eventId: event.id, mode: event.reclaimMode }
+                                                                                                                              });
+
+                                                                                                                                      if (event.reclaimMode === 'credit') {
+                                                                                                                                                await runTransaction('transferFrom', {
+                                                                                                                                                            tokenSymbol: event.tokenSymbol,
+                                                                                                                                                                        from: ticket.attendeeAddress,
+                                                                                                                                                                                    to: process.env.SIGNER_ADDRESS,
+                                                                                                                                                                                                amount: '1'
+                                                                                                                                                                                                          });
+
+                                                                                                                                                                                                                    await runTransaction('mintToken', {
+                                                                                                                                                                                                                                tokenSymbol: `${event.tokenSymbol}CREDIT`,
+                                                                                                                                                                                                                                            to: ticket.attendeeAddress,
+                                                                                                                                                                                                                                                        amount: '1'
+                                                                                                                                                                                                                                                                  });
+
+                                                                                                                                                                                                                                                                            db.get('tickets').find({ id: ticket.id }).assign({ status: 'converted_to_credit' }).write();
+                                                                                                                                                                                                                                                                                    } else {
+                                                                                                                                                                                                                                                                                              await runTransaction('burnToken', {
+                                                                                                                                                                                                                                                                                                          tokenSymbol: event.tokenSymbol,
+                                                                                                                                                                                                                                                                                                                      from: ticket.attendeeAddress,
+                                                                                                                                                                                                                                                                                                                                  amount: '1'
+                                                                                                                                                                                                                                                                                                                                            });
+
+                                                                                                                                                                                                                                                                                                                                                      db.get('tickets').find({ id: ticket.id }).assign({ status: 'reclaimed_burned' }).write();
+                                                                                                                                                                                                                                                                                                                                                              }
+
+                                                                                                                                                                                                                                                                                                                                                                      await sendTelegramAlert(`Reclaimed unused ticket for ${event.name}, mode: ${event.reclaimMode}`);
+
+                                                                                                                                                                                                                                                                                                                                                                              if (ticket.attendeeEmail) {
+                                                                                                                                                                                                                                                                                                                                                                                        await sendEmail(
+                                                                                                                                                                                                                                                                                                                                                                                                    ticket.attendeeEmail,
+                                                                                                                                                                                                                                                                                                                                                                                                                `Your ticket for ${event.name} expired`,
+                                                                                                                                                                                                                                                                                                                                                                                                                            event.reclaimMode === 'credit'
+                                                                                                                                                                                                                                                                                                                                                                                                                                          ? '<p>You did not make it to the event. Your ticket was converted into a credit for the next one.</p>'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        : '<p>Your unused ticket has been closed out.</p>'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  );
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                } catch (err) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        console.error(`Failed to reclaim ticket ${ticket.id}:`, err.message);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    module.exports = { reclaimExpiredTickets };

@@ -291,6 +291,7 @@
   <button class="tab-btn" data-panel="claim">Get Ticket</button>
   <button class="tab-btn" data-panel="scan">Door Scan</button>
   <button class="tab-btn" data-panel="board">Leaderboard</button>
+  <button class="tab-btn" data-panel="resale">Resale</button>
 </nav>
 
 <main>
@@ -349,6 +350,30 @@
 
   <section id="board" class="panel">
     <div id="board-list" class="empty">No entries yet</div>
+  </section>
+
+  <section id="resale" class="panel">
+    <div class="field">
+      <label>Ticket ID to list</label>
+      <input type="text" id="rs-ticket" placeholder="ticket id" />
+    </div>
+    <div class="field">
+      <label>Asking price</label>
+      <input type="text" id="rs-price" placeholder="50" />
+    </div>
+    <button class="btn" id="rs-list-btn">List for resale</button>
+    <div class="status-line" id="rs-list-status"></div>
+
+    <div class="field" style="margin-top:28px">
+      <label>Buyer wallet address</label>
+      <input type="text" id="rs-buyer-address" placeholder="0x..." />
+    </div>
+    <div class="field">
+      <label>Buyer email</label>
+      <input type="email" id="rs-buyer-email" placeholder="buyer@example.com" />
+    </div>
+    <button class="btn" id="rs-sell-btn">Connect seller wallet and transfer</button>
+    <div class="status-line" id="rs-sell-status"></div>
   </section>
 
 </main>
@@ -424,7 +449,7 @@
   function renderStub(data) {
     const holder = document.getElementById('stub-holder');
     holder.innerHTML = `
-      <div class="stub">
+      <div class="stub" data-ticket-id="${data.ticket.id}">
         <div class="perforation"></div>
         <div class="stub-top">
           <div>
@@ -434,7 +459,7 @@
         </div>
         <div class="stub-qr"><img src="${data.qrDataUrl}" alt="ticket qr code" /></div>
         <div class="stub-id">${data.ticket.id}</div>
-        <div class="stamp">Admit One</div>
+        <div class="stamp" data-ticket-id="${data.ticket.id}">Admit One</div>
       </div>
     `;
   }
@@ -453,6 +478,12 @@
       await postJson('/api/scan', { ticketId });
       status.className = 'status-line ok';
       status.textContent = 'Entry confirmed, ticket closed out';
+
+      const stamp = document.querySelector(`.stamp[data-ticket-id="${ticketId}"]`);
+      if (stamp) {
+        stamp.classList.add('used');
+        stamp.textContent = 'Used';
+      }
     } catch (err) {
       status.className = 'status-line error';
       status.textContent = err.message;
@@ -505,6 +536,72 @@
     } catch (err) {
       list.textContent = 'Could not load leaderboard';
     }
+  }
+
+  document.getElementById('rs-list-btn').addEventListener('click', async () => {
+    const status = document.getElementById('rs-list-status');
+    status.className = 'status-line';
+    status.textContent = 'Listing...';
+
+    try {
+      const data = await postJson('/api/resale/list', {
+        ticketId: document.getElementById('rs-ticket').value,
+        sellerAddress: (await getWalletAddress()) || '',
+        price: Number(document.getElementById('rs-price').value)
+      });
+      status.className = 'status-line ok';
+      status.textContent = `Listed at ${data.price}, cap was ${data.cap}`;
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = err.message;
+    }
+  });
+
+  document.getElementById('rs-sell-btn').addEventListener('click', async () => {
+    const status = document.getElementById('rs-sell-status');
+    const ticketId = document.getElementById('rs-ticket').value;
+    const buyerAddress = document.getElementById('rs-buyer-address').value;
+    const buyerEmail = document.getElementById('rs-buyer-email').value;
+
+    status.className = 'status-line';
+    status.textContent = 'Connecting wallet...';
+
+    try {
+      if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+      status.textContent = 'Preparing transfer...';
+      const prepared = await postJson('/api/resale/prepare-transfer', { ticketId, buyerAddress });
+
+      const tx = prepared.transactions[0];
+      status.textContent = 'Confirm the transfer in your wallet...';
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [tx]
+      });
+
+      status.textContent = 'Confirming with Brickken...';
+      await postJson('/api/resale/send-transfer', {
+        ticketId,
+        buyerAddress,
+        buyerEmail,
+        txId: prepared.txId,
+        txHash
+      });
+
+      status.className = 'status-line ok';
+      status.textContent = 'Transferred, ticket now belongs to the buyer';
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = err.message;
+    }
+  });
+
+  async function getWalletAddress() {
+    if (!window.ethereum) return null;
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    return accounts[0];
   }
 </script>
 

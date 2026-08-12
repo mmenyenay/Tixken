@@ -45,9 +45,8 @@ router.post('/resale/list', (req, res) => {
                                                       try {
                                                           const prepareResult = await runTransaction.prepareOnly('transferTo', {
                                                                 tokenSymbol: event.tokenSymbol,
-                                                                      signerAddress: ticket.attendeeAddress,
-                                                                            to: buyerAddress,
-                                                                                  amount: '1'
+                                                                      to: buyerAddress,
+                                                                            amount: '1'
                                                                                       });
 
                                                                                           res.json(prepareResult);
@@ -59,12 +58,14 @@ router.post('/resale/list', (req, res) => {
                                                                                                   // Step two. Seller's wallet has signed the prepared transaction client side,
                                                                                                   // this forwards it and updates our records.
                                                                                                   router.post('/resale/send-transfer', async (req, res) => {
-                                                                                                    const { ticketId, buyerAddress, buyerEmail, txId, signedTransactions } = req.body;
+                                                                                                    const { ticketId, buyerAddress, buyerEmail, txId, txHash } = req.body;
                                                                                                       const ticket = db.get('tickets').find({ id: ticketId }).value();
                                                                                                         const event = db.get('events').find({ id: ticket.eventId }).value();
 
                                                                                                           try {
-                                                                                                              const sendResult = await runTransaction.sendOnly({ txId, signedTransactions });
+                                                                                                              const confirmResult = await runTransaction.confirmOnly({ txId, txHash });
+
+                                                                                                                  const soldPrice = ticket.resaleListing.price;
 
                                                                                                                   db.get('tickets').find({ id: ticketId }).assign({
                                                                                                                         attendeeAddress: buyerAddress,
@@ -72,9 +73,9 @@ router.post('/resale/list', (req, res) => {
                                                                                                                                     resaleListing: null
                                                                                                                                         }).write();
 
-                                                                                                                                            await sendTelegramAlert(`Ticket resold for ${event.name} at ${ticket.resaleListing.price}`);
+                                                                                                                                            await sendTelegramAlert(`Ticket resold for ${event.name} at ${soldPrice}`);
 
-                                                                                                                                                res.json({ status: 'transferred', sendResult });
+                                                                                                                                                res.json({ status: 'transferred', confirmResult });
                                                                                                                                                   } catch (err) {
                                                                                                                                                       res.status(500).json({ error: err.response ? err.response.data : err.message });
                                                                                                                                                         }

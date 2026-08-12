@@ -43,15 +43,15 @@ const client = axios.create({
                                                                     const preparePayload = {
                                                                       chainId: process.env.CHAIN_ID,
                                                                       method,
-                                                                      signerAddress: process.env.SIGNER_ADDRESS,
+                                                                      executionMode: 'client-broadcast',
                                                                       ...params
                                                                     };
                                                                     const prepareRes = await client.post('/prepare-transactions', preparePayload);
                                                                     return prepareRes.data;
                                                                   };
 
-                                                                  runTransaction.sendOnly = async function ({ txId, signedTransactions }) {
-                                                                    const sendRes = await client.post('/send-transactions', { txId, signedTransactions });
+                                                                  runTransaction.confirmOnly = async function ({ txId, txHash }) {
+                                                                    const sendRes = await client.post('/send-transactions', { txId, txHash });
                                                                     return sendRes.data;
                                                                   };
 

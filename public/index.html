@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tixken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-navy: #14171f;
+    --ink-navy-deep: #0c0e14;
+    --stub-cream: #f0ead8;
+    --stub-cream-shadow: #d9d0b8;
+    --stamp-red: #c1272d;
+    --gold: #c9a227;
+    --text-on-navy: #ece8db;
+    --text-muted: #8b8f9c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink-navy);
+    color: var(--text-on-navy);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 32px 24px 16px;
+    text-align: center;
+    border-bottom: 1px solid rgba(236, 232, 219, 0.08);
+  }
+
+  .wordmark {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 34px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .wordmark span { color: var(--gold); }
+
+  .tagline {
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 20px 16px 0;
+    flex-wrap: wrap;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav button.active {
+    color: var(--text-on-navy);
+    border-bottom-color: var(--gold);
+  }
+
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--ink-navy-deep);
+    border: 1px solid rgba(236, 232, 219, 0.15);
+    color: var(--text-on-navy);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    border-radius: 4px;
+  }
+
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--gold);
+    color: var(--ink-navy-deep);
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .btn:active { transform: scale(0.99); }
+
+  .status-line {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .status-line.error { color: var(--stamp-red); }
+  .status-line.ok { color: var(--gold); }
+
+  /* Ticket stub */
+  .stub {
+    position: relative;
+    background: var(--stub-cream);
+    color: var(--ink-navy-deep);
+    border-radius: 10px;
+    padding: 24px 22px;
+    margin-top: 20px;
+    box-shadow: 0 12px 0 -4px var(--stub-cream-shadow);
+    overflow: hidden;
+  }
+
+  .stub::before, .stub::after {
+    content: "";
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: var(--ink-navy);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .stub::before { left: -12px; }
+  .stub::after { right: -12px; }
+
+  .perforation {
+    border-left: 2px dashed var(--ink-navy-deep);
+    opacity: 0.25;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 90px;
+  }
+
+  .stub-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-right: 100px;
+  }
+
+  .stub-event {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+
+  .stub-symbol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #6b6653;
+    margin-top: 4px;
+  }
+
+  .stub-qr {
+    position: absolute;
+    right: 22px;
+    top: 24px;
+    width: 74px;
+    height: 74px;
+  }
+
+  .stub-qr img {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  .stub-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #6b6653;
+    margin-top: 16px;
+    padding-right: 100px;
+  }
+
+  .stamp {
+    position: absolute;
+    bottom: 18px;
+    right: 24px;
+    border: 3px solid var(--stamp-red);
+    color: var(--stamp-red);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 4px;
+    transform: rotate(-8deg);
+  }
+
+  .stamp.used {
+    border-color: var(--ink-navy);
+    color: var(--ink-navy);
+  }
+
+  #scan-video {
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 12px;
+    background: #000;
+  }
+
+  .leader-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(236, 232, 219, 0.08);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  .leader-rank {
+    color: var(--gold);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    margin-right: 10px;
+  }
+
+  .empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="wordmark">TIX<span>KEN</span></h1>
+  <div class="tagline">Tokenized admission, box office style</div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-panel="create">Host</button>
+  <button class="tab-btn" data-panel="claim">Get Ticket</button>
+  <button class="tab-btn" data-panel="scan">Door Scan</button>
+  <button class="tab-btn" data-panel="board">Leaderboard</button>
+</nav>
+
+<main>
+
+  <section id="create" class="panel active">
+    <div class="field">
+      <label>Event name</label>
+      <input type="text" id="ev-name" placeholder="Sepolia Meetup Night" />
+    </div>
+    <div class="field">
+      <label>Token symbol, 2 to 5 letters</label>
+      <input type="text" id="ev-symbol" placeholder="MEETX" maxlength="5" style="text-transform:uppercase" />
+    </div>
+    <div class="field">
+      <label>Tokenizer email</label>
+      <input type="email" id="ev-email" placeholder="host@example.com" />
+    </div>
+    <div class="field">
+      <label>What happens to unused tickets</label>
+      <select id="ev-reclaim">
+        <option value="burn">Burn them</option>
+        <option value="credit">Convert to a credit for next time</option>
+      </select>
+    </div>
+    <button class="btn" id="create-btn">Tokenize this event</button>
+    <div class="status-line" id="create-status"></div>
+  </section>
+
+  <section id="claim" class="panel">
+    <div class="field">
+      <label>Event ID</label>
+      <input type="text" id="tk-event" placeholder="paste the event id" />
+    </div>
+    <div class="field">
+      <label>Your wallet address</label>
+      <input type="text" id="tk-address" placeholder="0x..." />
+    </div>
+    <div class="field">
+      <label>Your email</label>
+      <input type="email" id="tk-email" placeholder="you@example.com" />
+    </div>
+    <button class="btn" id="claim-btn">Get my ticket</button>
+    <div class="status-line" id="claim-status"></div>
+    <div id="stub-holder"></div>
+  </section>
+
+  <section id="scan" class="panel">
+    <div class="field">
+      <label>Or paste ticket ID manually</label>
+      <input type="text" id="scan-manual" placeholder="ticket id" />
+    </div>
+    <button class="btn" id="scan-manual-btn">Confirm entry</button>
+    <video id="scan-video" autoplay muted playsinline></video>
+    <div class="status-line" id="scan-status"></div>
+  </section>
+
+  <section id="board" class="panel">
+    <div id="board-list" class="empty">No entries yet</div>
+  </section>
+
+</main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.panel');
+
+  tabs.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabs.forEach((b) => b.classList.remove('active'));
+      panels.forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.panel).classList.add('active');
+      if (btn.dataset.panel === 'board') loadLeaderboard();
+      if (btn.dataset.panel === 'scan') startScanner();
+    });
+  });
+
+  async function postJson(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  document.getElementById('create-btn').addEventListener('click', async () => {
+    const status = document.getElementById('create-status');
+    status.className = 'status-line';
+    status.textContent = 'Tokenizing on the sandbox, this can take a moment...';
+
+    try {
+      const data = await postJson('/api/events', {
+        name: document.getElementById('ev-name').value,
+        tokenSymbol: document.getElementById('ev-symbol').value.toUpperCase(),
+        tokenizerEmail: document.getElementById('ev-email').value,
+        reclaimMode: document.getElementById('ev-reclaim').value,
+        supplyCap: '1000'
+      });
+      status.className = 'status-line ok';
+      status.textContent = 'Event live. Event ID: ' + data.event.id;
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = err.message;
+    }
+  });
+
+  document.getElementById('claim-btn').addEventListener('click', async () => {
+    const status = document.getElementById('claim-status');
+    status.className = 'status-line';
+    status.textContent = 'Minting your ticket...';
+
+    try {
+      const data = await postJson('/api/tickets', {
+        eventId: document.getElementById('tk-event').value,
+        attendeeAddress: document.getElementById('tk-address').value,
+        attendeeEmail: document.getElementById('tk-email').value
+      });
+      status.className = 'status-line ok';
+      status.textContent = 'Ticket minted';
+      renderStub(data);
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = err.message;
+    }
+  });
+
+  function renderStub(data) {
+    const holder = document.getElementById('stub-holder');
+    holder.innerHTML = `
+      <div class="stub">
+        <div class="perforation"></div>
+        <div class="stub-top">
+          <div>
+            <div class="stub-event">Ticket confirmed</div>
+            <div class="stub-symbol">Ticket ID</div>
+          </div>
+        </div>
+        <div class="stub-qr"><img src="${data.qrDataUrl}" alt="ticket qr code" /></div>
+        <div class="stub-id">${data.ticket.id}</div>
+        <div class="stamp">Admit One</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('scan-manual-btn').addEventListener('click', async () => {
+    const ticketId = document.getElementById('scan-manual').value.trim();
+    if (ticketId) await confirmEntry(ticketId);
+  });
+
+  async function confirmEntry(ticketId) {
+    const status = document.getElementById('scan-status');
+    status.className = 'status-line';
+    status.textContent = 'Confirming entry...';
+
+    try {
+      await postJson('/api/scan', { ticketId });
+      status.className = 'status-line ok';
+      status.textContent = 'Entry confirmed, ticket closed out';
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = err.message;
+    }
+  }
+
+  let scannerStarted = false;
+  function startScanner() {
+    if (scannerStarted) return;
+    scannerStarted = true;
+
+    const qrRegion = new Html5Qrcode('scan-video');
+    Html5Qrcode.getCameras().then((cameras) => {
+      if (!cameras.length) return;
+      qrRegion.start(
+        cameras[0].id,
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          try {
+            const payload = JSON.parse(decodedText);
+            confirmEntry(payload.ticketId);
+          } catch (e) {
+            confirmEntry(decodedText);
+          }
+        },
+        () => {}
+      );
+    }).catch(() => {
+      document.getElementById('scan-status').textContent = 'Camera unavailable, use the manual field above';
+    });
+  }
+
+  async function loadLeaderboard() {
+    const list = document.getElementById('board-list');
+    try {
+      const res = await fetch('/api/leaderboard');
+      const entries = await res.json();
+      if (!entries.length) {
+        list.className = 'empty';
+        list.textContent = 'No entries yet';
+        return;
+      }
+      list.className = '';
+      list.innerHTML = entries.map((e, i) => `
+        <div class="leader-row">
+          <span><span class="leader-rank">#${i + 1}</span>${e.attendeeAddress}</span>
+          <span>${e.eventsAttended} attended</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      list.textContent = 'Could not load leaderboard';
+    }
+  }
+</script>
+
+</body>
+  </html>

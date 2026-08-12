@@ -9,6 +9,10 @@ const { sendTelegramAlert } = require('../notify/telegram');
 router.post('/events', async (req, res) => {
   const { name, tokenSymbol, supplyCap, url, resaleCapPercent, reclaimMode } = req.body;
 
+  if (!/^[A-Z0-9]{2,5}$/.test(tokenSymbol)) {
+    return res.status(400).json({ error: 'tokenSymbol must be 2 to 5 uppercase letters or numbers' });
+  }
+
     try {
         const result = await runTransaction('newTokenization', {
               tokenizerEmail: req.body.tokenizerEmail,

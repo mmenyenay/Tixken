@@ -19,8 +19,8 @@ router.post('/scan', async (req, res) => {
                   try {
                       const burnResult = await runTransaction('burnToken', {
                             tokenSymbol: event.tokenSymbol,
-                                  from: ticket.attendeeAddress,
-                                        amount: '1'
+                                  amount: '1',
+                                        investorEmail: ticket.attendeeEmail
                                             });
 
                                                 db.get('tickets')

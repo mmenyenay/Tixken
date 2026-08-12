@@ -1,4 +1,5 @@
 const { callMcpTool } = require('./mcpClient');
+const { runTransaction } = require('../brickkenClient');
 require('dotenv').config();
 
 // One time setup. Registers the ERC-8004 agent identity, then grants it a
@@ -27,6 +28,14 @@ async function setupAgent() {
                                                   maxCallsPerPeriod: 500
                                                     });
                                                       console.log('Executor action set:', actionResult);
-                                                      }
 
+                                                      const creditTokenResult = await runTransaction('newTokenization', {
+                                                          tokenizerEmail: process.env.TOKENIZER_EMAIL,
+                                                              name: 'Tixken Credit',
+                                                                  tokenSymbol: process.env.CREDIT_TOKEN_SYMBOL,
+                                                                      tokenType: 'RWA_TOKEN',
+                                                                          supplyCap: '1000000',
+                                                                              url: process.env.BASE_URL
+                                                      });
+                                                      console.log('Credit token tokenized:', creditTokenResult);
                                                       setupAgent().catch((err) => console.error('Setup failed:', err));

@@ -340,10 +340,10 @@
 
   <section id="scan" class="panel">
     <div class="field">
-      <label>Or paste ticket ID manually</label>
-      <input type="text" id="scan-manual" placeholder="ticket id" />
+      <label>Ticket ID</label>
+      <input type="text" id="scan-manual" placeholder="paste ticket id, or scan below" />
     </div>
-    <button class="btn" id="scan-manual-btn">Confirm entry</button>
+    <button class="btn" id="scan-manual-btn">Connect wallet and confirm entry</button>
     <video id="scan-video" autoplay muted playsinline></video>
     <div class="status-line" id="scan-status"></div>
   </section>
@@ -475,10 +475,25 @@
   async function confirmEntry(ticketId) {
     const status = document.getElementById('scan-status');
     status.className = 'status-line';
-    status.textContent = 'Confirming entry...';
 
     try {
-      await postJson('/api/scan', { ticketId });
+      if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+      status.textContent = 'Preparing entry check...';
+      const prepared = await postJson('/api/scan/prepare', { ticketId });
+
+      const tx = prepared.transactions[0];
+      status.textContent = 'Confirm in your wallet...';
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [tx]
+      });
+
+      status.textContent = 'Confirming with Brickken...';
+      await postJson('/api/scan/confirm', { ticketId, txId: prepared.txId, txHash });
+
       status.className = 'status-line ok';
       status.textContent = 'Entry confirmed, ticket closed out';
 

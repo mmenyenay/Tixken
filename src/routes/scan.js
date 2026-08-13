@@ -4,41 +4,56 @@ const { runTransaction } = require('../brickkenClient');
 const db = require('../store');
 const { sendTelegramAlert } = require('../notify/telegram');
 
-// body: ticketId
-router.post('/scan', async (req, res) => {
+// Step one, prepares the burn for the ticket holder's own wallet to sign.
+router.post('/scan/prepare', async (req, res) => {
   const { ticketId } = req.body;
-    const ticket = db.get('tickets').find({ id: ticketId }).value();
+  const ticket = db.get('tickets').find({ id: ticketId }).value();
 
-      if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-        if (ticket.status !== 'issued') {
-            return res.status(400).json({ error: `Ticket already ${ticket.status}` });
-              }
+  if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+  if (ticket.status !== 'issued') {
+    return res.status(400).json({ error: `Ticket already ${ticket.status}` });
+  }
 
-                const event = db.get('events').find({ id: ticket.eventId }).value();
+  const event = db.get('events').find({ id: ticket.eventId }).value();
 
-                  try {
-                      const burnResult = await runTransaction('burnToken', {
-                            tokenSymbol: event.tokenSymbol,
-                                  signerAddress: process.env.SIGNER_ADDRESS,
-                                        amount: '1',
-                                              investorEmail: ticket.attendeeEmail
-                                            });
+  try {
+    const prepared = await runTransaction.prepareOnly('burnToken', {
+      tokenSymbol: event.tokenSymbol,
+      signerAddress: ticket.attendeeAddress,
+      amount: '1',
+      investorEmail: ticket.attendeeEmail
+    });
 
-                                                db.get('tickets')
-                                                      .find({ id: ticketId })
-                                                            .assign({ status: 'used', usedAt: new Date().toISOString(), burnTxId: burnResult.txId })
-                                                                  .write();
+    res.json(prepared);
+  } catch (err) {
+    res.status(500).json({ error: err.response ? err.response.data : err.message });
+  }
+});
 
-                                                                      db.get('leaderboard')
-                                                                            .push({ attendeeAddress: ticket.attendeeAddress, eventId: event.id, attendedAt: new Date().toISOString() })
-                                                                                  .write();
+// Step two, forwards the signed burn once the attendee's wallet confirms it.
+router.post('/scan/confirm', async (req, res) => {
+  const { ticketId, txId, txHash } = req.body;
+  const ticket = db.get('tickets').find({ id: ticketId }).value();
+  const event = db.get('events').find({ id: ticket.eventId }).value();
 
-                                                                                      await sendTelegramAlert(`Entry confirmed for ${event.name}`);
+  try {
+    const confirmResult = await runTransaction.confirmOnly({ txId, txHash });
 
-                                                                                          res.json({ status: 'entry confirmed', burnResult });
-                                                                                            } catch (err) {
-                                                                                                res.status(500).json({ error: err.response ? err.response.data : err.message });
-                                                                                                  }
-                                                                                                  });
+    db.get('tickets')
+      .find({ id: ticketId })
+      .assign({ status: 'used', usedAt: new Date().toISOString() })
+      .write();
 
-                                                                                                  module.exports = router;
+    db.get('leaderboard')
+      .push({ attendeeAddress: ticket.attendeeAddress, eventId: event.id, attendedAt: new Date().toISOString() })
+      .write();
+
+    await sendTelegramAlert(`Entry confirmed for ${event.name}`);
+
+    res.json({ status: 'entry confirmed', confirmResult });
+  } catch (err) {
+    res.status(500).json({ error: err.response ? err.response.data : err.message });
+  }
+});
+
+module.exports = router;

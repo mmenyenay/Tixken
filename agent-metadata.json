@@ -1,0 +1,7 @@
+{
+      "name": "Tixken Reclaim Agent",
+        "description": "Reclaims unused event tickets after the event deadline, either burning them or converting them into a loyalty credit, and revokes ticket transfers that skip the resale price cap.",
+          "owner": "Tixken",
+            "version": "0.1.0"
+            }
+}

@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const client = axios.create({
   baseURL: process.env.BRICKKEN_API_BASE,
+  timeout: 20000,
   headers: {
     'x-api-key': process.env.BRICKKEN_API_KEY,
     'Content-Type': 'application/json'

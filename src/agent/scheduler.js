@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { reclaimExpiredTickets } = require('./reclaimJob');
-const { checkForUnauthorizedTransfers } = require('../routes/src/agent/complianceWatch');
+const { checkForUnauthorizedTransfers } = require('./complianceWatch');
 
 function startScheduler() {
   cron.schedule('0 * * * *', async () => {

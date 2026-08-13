@@ -32,18 +32,18 @@ Read calls used:
 - `GET /get-whitelist-status`
 - `GET /get-token-info`
 
-### MCP (Agentic)
+### REST (Agentic)
 
-Against the hosted Brickken MCP server (`https://mcp.brickken.com/mcp`), for the agentic reclaim side:
+REST against the Agentic API (`https://api.sandbox.brickken.com/x402/...`),
+client-signed mode using the API key, no x402 payment required:
 
-- `agent_register` - give the reclaim agent an ERC-8004 identity
-- `rams_grant_mandate` and `rams_set_executor_action` - scope what the agent is allowed to do and cap how often it can act
-- `rams_can_execute` - checked before every reclaim run
-- `rams_execute` - perform the reclaim under the mandate
+- `POST /x402/agent/register`, to register the reclaim agent's ERC-8004 identity
+  on Base Sepolia
 
-## Why two surfaces
-
-The ticket lifecycle (tokenize, whitelist, mint, burn) is a straightforward API-key workflow, so it runs on REST. The reclaim decision is different—it is an autonomous action taken without a human clicking a button, so it needed delegated, auditable authority rather than a raw API key. RAMS mandates exist for exactly that, which is why the reclaim job runs through MCP against the Agentic API instead.
+  RAMS mandate enforcement (Ethereum Sepolia) is scoped but not completed, it
+  depends on ComplianceProvider and AgentExecutor roles that appear to be
+  admin-level on Brickken's sandbox, question is open in Brickken's Discord
+  tech-chat channel as of this submission.
 
 ## How the reclaim decision works
 

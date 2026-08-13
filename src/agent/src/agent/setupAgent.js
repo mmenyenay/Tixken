@@ -1,41 +1,64 @@
-const { callMcpTool } = require('./mcpClient');
-const { runTransaction } = require('../brickkenClient');
+const axios = require('axios');
+const { Wallet } = require('ethers');
 require('dotenv').config();
 
-// One time setup. Registers the ERC-8004 agent identity, then grants it a
-// RAMS mandate scoped only to the reclaim action, with a cap on how many
-// tickets it can touch per run. Check the Postman collection for the exact
-// field names your account version expects, this follows the documented
-// tool names but Brickken may adjust required fields per release.
-async function setupAgent() {
-  const registerResult = await callMcpTool('agent_register', {
-      ownerAddress: process.env.SIGNER_ADDRESS,
-          metadataUri: process.env.AGENT_METADATA_URI || ''
-            });
-              console.log('Agent registered:', registerResult);
+const client = axios.create({
+      baseURL: process.env.BRICKKEN_API_BASE,
+        headers: {
+                'x-api-key': process.env.BRICKKEN_API_KEY,
+                    'Content-Type': 'application/json'
+        }
+});
 
-                const mandateResult = await callMcpTool('rams_grant_mandate', {
-                    agentAddress: process.env.AGENT_ADDRESS,
-                        principalAddress: process.env.SIGNER_ADDRESS,
-                            scope: 'reclaim_unused_tickets',
-                                expiresAt: process.env.MANDATE_EXPIRY
-                                  });
-                                    console.log('Mandate granted:', mandateResult);
+const agentWallet = new Wallet(process.env.AGENT_PRIVATE_KEY);
 
-                                      const actionResult = await callMcpTool('rams_set_executor_action', {
-                                          agentAddress: process.env.AGENT_ADDRESS,
-                                              action: 'reclaim_unused_tickets',
-                                                  maxCallsPerPeriod: 500
-                                                    });
-                                                      console.log('Executor action set:', actionResult);
+async function registerAgent() {
+      const prepareRes = await client.post('/x402/agent/register', {
+            chainId: process.env.AGENT_CHAIN_ID,
+                executionMode: 'client-signed',
+                    signerAddress: process.env.AGENT_ADDRESS,
+                        name: 'Tixken Reclaim Agent',
+                            description: 'Reclaims unused event tickets after the deadline, burns or converts them to a credit, and revokes ticket transfers that skip the resale price cap.',
+                                image: process.env.AGENT_IMAGE_URL,
+                                    services: [
+                                              {
+                                                        name: 'reclaim-service',
+                                                                endpoint: `${process.env.BASE_URL}/api`
+                                              }
+                                    ],
+                                        aiModelName: 'none',
+                                            aiModelProvider: 'rule-based',
+                                                x402Support: false,
+                                                    active: true
+      });
 
-                                                      const creditTokenResult = await runTransaction('newTokenization', {
-                                                          tokenizerEmail: process.env.TOKENIZER_EMAIL,
-                                                              name: 'Tixken Credit',
-                                                                  tokenSymbol: process.env.CREDIT_TOKEN_SYMBOL,
-                                                                      tokenType: 'RWA_TOKEN',
-                                                                          supplyCap: '1000000',
-                                                                              url: process.env.BASE_URL
-                                                      });
-                                                      console.log('Credit token tokenized:', creditTokenResult);
-                                                      setupAgent().catch((err) => console.error('Setup failed:', err));
+        const { txId, transactions, info } = prepareRes.data;
+          const txList = Array.isArray(transactions) ? transactions : [transactions];
+
+            const signedTransactions = [];
+              for (const tx of txList) {
+                    const signed = await agentWallet.signTransaction(tx);
+                        signedTransactions.push(signed);
+              }
+
+                const sendRes = await client.post('/send-transactions', {
+                        txId,
+                            signedTransactions
+                });
+
+                  console.log('Agent registered. Save this agentUuid:', info?.agentUuid);
+                    console.log('Send result:', sendRes.data);
+}
+
+registerAgent().catch((err) => {
+      console.error('Registration failed:', err.response ? err.response.data : err.message);
+});
+})
+                })
+              }
+                                              }
+                                    ]
+      })
+}
+        }
+})

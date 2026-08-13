@@ -8,6 +8,9 @@ node_modules/
 package-lock.json
 yarn.lock
 
+# Data files
+data.json
+
 # Logs
 logs
 *.log

@@ -15,6 +15,7 @@ router.post('/events', async (req, res) => {
   try {
     const result = await runTransaction('newTokenization', {
       tokenizerEmail,
+      signerAddress: process.env.SIGNER_ADDRESS,
       name,
       tokenSymbol,
       tokenType: 'RWA_TOKEN',

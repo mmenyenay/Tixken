@@ -23,6 +23,7 @@ async function reclaimExpiredTickets() {
         if (event.reclaimMode === 'credit') {
           await runTransaction('transferFrom', {
             tokenSymbol: event.tokenSymbol,
+            signerAddress: process.env.SIGNER_ADDRESS,
             from: ticket.attendeeAddress,
             to: process.env.SIGNER_ADDRESS,
             amount: '1'
@@ -30,6 +31,7 @@ async function reclaimExpiredTickets() {
 
           await runTransaction('mintToken', {
             tokenSymbol: process.env.CREDIT_TOKEN_SYMBOL,
+            signerAddress: process.env.SIGNER_ADDRESS,
             userToMint: [
               {
                 investorEmail: ticket.attendeeEmail,
@@ -44,6 +46,7 @@ async function reclaimExpiredTickets() {
         } else {
           await runTransaction('burnToken', {
             tokenSymbol: event.tokenSymbol,
+            signerAddress: process.env.SIGNER_ADDRESS,
             amount: '1',
             investorEmail: ticket.attendeeEmail
           });

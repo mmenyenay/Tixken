@@ -15,6 +15,7 @@ router.post('/tickets', async (req, res) => {
   try {
     const mintResult = await runTransaction('mintToken', {
       tokenSymbol: event.tokenSymbol,
+      signerAddress: process.env.SIGNER_ADDRESS,
       userToMint: [
         {
           investorEmail: attendeeEmail,

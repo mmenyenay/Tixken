@@ -17,6 +17,7 @@ async function checkForUnauthorizedTransfers() {
 
     await runTransaction('burnToken', {
       tokenSymbol: event.tokenSymbol,
+      signerAddress: process.env.SIGNER_ADDRESS,
       amount: '1',
       investorEmail: ticket.attendeeEmail
     });

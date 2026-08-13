@@ -401,7 +401,10 @@
       body: JSON.stringify(body)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) {
+      const message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+      throw new Error(message || 'Request failed');
+    }
     return data;
   }
 

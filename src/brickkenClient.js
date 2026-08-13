@@ -25,11 +25,10 @@ const client = axios.create({
                                     const prepareRes = await client.post('/prepare-transactions', preparePayload);
                                       const { txId, transactions } = prepareRes.data;
 
-                                        const signedTransactions = [];
-                                          for (const tx of transactions) {
-                                              const signed = await wallet.signTransaction(tx);
-                                                  signedTransactions.push(signed);
-                                                    }
+const txList = Array.isArray(transactions) ? transactions : [transactions];
+
+const signedTransactions = [];
+for (const tx of txList) {
 
                                                       const sendRes = await client.post('/send-transactions', {
                                                           txId,

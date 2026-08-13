@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
-const { runTransaction } = require('../brickkenClient');
+const { mintWithWhitelist } = require('../brickkenClient');
 const db = require('../store');
 const { sendEmail } = require('../notify/email');
 
@@ -13,7 +13,7 @@ router.post('/tickets', async (req, res) => {
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
   try {
-    const mintResult = await runTransaction('mintToken', {
+    const mintResult = await mintWithWhitelist({
       tokenSymbol: event.tokenSymbol,
       signerAddress: process.env.SIGNER_ADDRESS,
       userToMint: [

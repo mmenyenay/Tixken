@@ -39,6 +39,45 @@ async function runTransaction(method, params) {
   return sendRes.data;
 }
 
+async function waitForConfirmation(txId, maxAttempts = 15) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await getTransactionStatus(txId);
+    if (status.status === 'success' || status.status === 'confirmed') return status;
+    if (status.status === 'failed' || status.status === 'reverted') {
+      throw new Error(`Transaction ${txId} failed: ${JSON.stringify(status)}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+  }
+  throw new Error(`Transaction ${txId} did not confirm in time`);
+}
+
+async function mintWithWhitelist(params) {
+  const preparePayload = {
+    chainId: process.env.CHAIN_ID,
+    method: 'mintToken',
+    ...params
+  };
+
+  const prepareRes = await client.post('/prepare-transactions', preparePayload);
+  const { whitelistTx, txIdWhitelist, transactions, txId } = prepareRes.data;
+
+  const signedWhitelist = await wallet.signTransaction(whitelistTx);
+  await client.post('/send-transactions', {
+    txId: txIdWhitelist,
+    signedTransactions: [signedWhitelist]
+  });
+  await waitForConfirmation(txIdWhitelist);
+
+  const signedMint = await wallet.signTransaction(transactions);
+  const sendRes = await client.post('/send-transactions', {
+    txId,
+    signedTransactions: [signedMint]
+  });
+  await waitForConfirmation(txId);
+
+  return sendRes.data;
+}
+
 runTransaction.prepareOnly = async function (method, params) {
   const preparePayload = {
     chainId: process.env.CHAIN_ID,
@@ -74,6 +113,8 @@ async function getTokenInfo(tokenSymbol) {
 
 module.exports = {
   runTransaction,
+  waitForConfirmation,
+  mintWithWhitelist,
   getTransactionStatus,
   getWhitelistStatus,
   getTokenInfo

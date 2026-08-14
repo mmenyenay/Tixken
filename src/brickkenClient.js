@@ -115,7 +115,7 @@ async function getTokenInfo(tokenSymbol) {
 
 async function whitelistBuyer(tokenSymbol, buyerAddress, buyerEmail) {
   const preparePayload = {
-    chainId: process.env.CHAIN_ID,
+    chainId: 'aa36a7',
     method: 'whitelist',
     signerAddress: process.env.SIGNER_ADDRESS,
     tokenSymbol,

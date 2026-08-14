@@ -45,6 +45,7 @@ router.post('/resale/list', (req, res) => {
                                                       try {
                                                           const prepareResult = await runTransaction.prepareOnly('transferTo', {
                                                                 tokenSymbol: event.tokenSymbol,
+      signerAddress: ticket.attendeeAddress,
                                                                       to: buyerAddress,
                                                                             amount: '1'
                                                                                       });

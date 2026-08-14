@@ -407,9 +407,8 @@ async function ensureSepoliaNetwork() {
 
 let html5QrcodeScanner = null;
 function getScannerInstance() {
-    html5QrcodeScanner = new Html5Qrcode('scan-video');
-  }
-  return html5QrcodeScanner;
+    if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode('scan-video');
+    return html5QrcodeScanner;
 }
 </script>
 
@@ -435,6 +434,7 @@ function getScannerInstance() {
       body: JSON.stringify(body)
     });
     const data = await res.json();
+    if (!res.ok) {
       const message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
       throw new Error(message || 'Request failed');
     }
@@ -589,11 +589,12 @@ function getScannerInstance() {
     try {
       const res = await fetch('/api/leaderboard');
       const entries = await res.json();
-        list.className = 'empty';
-        list.textContent = 'No entries yet';
-        return;
-      }
-      list.className = '';
+    if (!entries.length) {
+      list.className = 'empty';
+      list.textContent = 'No entries yet';
+      return;
+    }
+    list.className = '';
       list.innerHTML = entries.map((e, i) => `
         <div class="leader-row">
           <span><span class="leader-rank">#${i + 1}</span>${e.attendeeAddress}</span>

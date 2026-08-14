@@ -43,7 +43,8 @@ router.post('/resale/list', (req, res) => {
                                                     const event = db.get('events').find({ id: ticket.eventId }).value();
 
                                                       try {
-                                                          const alreadyWhitelisted = await getWhitelistStatus(event.tokenSymbol, buyerAddress);
+                                                          const whitelistStatus = await getWhitelistStatus(event.tokenSymbol, buyerAddress);
+    const alreadyWhitelisted = whitelistStatus.isWhitelisted;
     if (!alreadyWhitelisted) {
       await whitelistBuyer(event.tokenSymbol, buyerAddress, buyerEmail);
     }

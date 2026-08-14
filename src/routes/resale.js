@@ -11,7 +11,7 @@ router.post('/resale/list', (req, res) => {
     const ticket = db.get('tickets').find({ id: ticketId }).value();
 
       if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-        if (ticket.attendeeAddress !== sellerAddress) {
+        if ((ticket.attendeeAddress || '').toLowerCase() !== (sellerAddress || '').toLowerCase()) {
             return res.status(403).json({ error: 'Only the current holder can list this ticket' });
               }
 

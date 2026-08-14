@@ -541,7 +541,7 @@ async function ensureSepoliaNetwork() {
     if (scannerStarted) return;
     scannerStarted = true;
 
-    const qrRegion = new Html5Qrcode('scan-video');
+    const qrRegion = getScannerInstance();
     Html5Qrcode.getCameras().then((cameras) => {
       if (!cameras.length) return;
           const backCamera = cameras.find((c) => /back|rear|environment/i.test(c.label));

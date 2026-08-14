@@ -384,6 +384,29 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
+async function ensureSepoliaNetwork() {
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] });
+  } catch (switchError) {
+    if (switchError.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: "0xaa36a7",
+          chainName: "Sepolia",
+          nativeCurrency: { name: "SepoliaETH", symbol: "SEP", decimals: 18 },
+          rpcUrls: ["https://sepolia.infura.io/v3/"],
+          blockExplorerUrls: ["https://sepolia.etherscan.io"]
+        }]
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
+</script>
+
+<script>
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.panel');
 
@@ -483,6 +506,7 @@
     try {
       if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
       await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await ensureSepoliaNetwork();
 
       status.textContent = 'Preparing entry check...';
       const prepared = await postJson('/api/scan/prepare', { ticketId });
@@ -520,8 +544,10 @@
     const qrRegion = new Html5Qrcode('scan-video');
     Html5Qrcode.getCameras().then((cameras) => {
       if (!cameras.length) return;
+          const backCamera = cameras.find((c) => /back|rear|environment/i.test(c.label));
+          const chosenCamera = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
       qrRegion.start(
-        cameras[0].id,
+        chosenCamera,
         { fps: 10, qrbox: 220 },
         (decodedText) => {
           try {
@@ -591,6 +617,7 @@
     try {
       if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
       await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await ensureSepoliaNetwork();
 
       status.textContent = 'Preparing transfer...';
       const prepared = await postJson('/api/resale/prepare-transfer', { ticketId, buyerAddress });
@@ -623,6 +650,7 @@
   async function getWalletAddress() {
     if (!window.ethereum) return null;
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await ensureSepoliaNetwork();
     return accounts[0];
   }
 </script>

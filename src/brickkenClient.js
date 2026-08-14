@@ -86,7 +86,9 @@ runTransaction.prepareOnly = async function (method, params) {
     ...params
   };
   const prepareRes = await client.post('/prepare-transactions', preparePayload);
-  return prepareRes.data;
+  const { transactions } = prepareRes.data;
+  const txList = Array.isArray(transactions) ? transactions : [transactions];
+  return { ...prepareRes.data, transactions: txList };
 };
 
 runTransaction.confirmOnly = async function ({ txId, txHash }) {

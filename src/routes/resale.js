@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { runTransaction } = require('../brickkenClient');
+const { runTransaction, getWhitelistStatus, whitelistBuyer } = require('../brickkenClient');
 const db = require('../store');
 const { sendTelegramAlert } = require('../notify/telegram');
 
@@ -33,7 +33,7 @@ router.post('/resale/list', (req, res) => {
                                       // Step one of the buy flow. Prepares the transfer for the seller's wallet
                                       // to sign, does not touch the chain yet.
                                       router.post('/resale/prepare-transfer', async (req, res) => {
-                                        const { ticketId, buyerAddress } = req.body;
+                                        const { ticketId, buyerAddress, buyerEmail } = req.body;
                                           const ticket = db.get('tickets').find({ id: ticketId }).value();
 
                                             if (!ticket || !ticket.resaleListing) {
@@ -43,7 +43,12 @@ router.post('/resale/list', (req, res) => {
                                                     const event = db.get('events').find({ id: ticket.eventId }).value();
 
                                                       try {
-                                                          const prepareResult = await runTransaction.prepareOnly('transferTo', {
+                                                          const alreadyWhitelisted = await getWhitelistStatus(event.tokenSymbol, buyerAddress);
+    if (!alreadyWhitelisted) {
+      await whitelistBuyer(event.tokenSymbol, buyerAddress, buyerEmail);
+    }
+
+    const prepareResult = await runTransaction.prepareOnly('transferTo', {
                                                                 tokenSymbol: event.tokenSymbol,
       signerAddress: ticket.attendeeAddress,
                                                                       to: buyerAddress,

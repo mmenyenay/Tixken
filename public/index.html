@@ -525,7 +525,7 @@ function getScannerInstance() {
 
   async function confirmEntry(ticketId) {
     const status = document.getElementById('scan-status');
-    status.className = 'status-line';
+    status.className = 'status-line'; status.textContent = 'eth check: ' + typeof window.ethereum + ' request: ' + typeof (window.ethereum && window.ethereum.request);
     if (!window.ethereum) {
       status.className = 'status-line error';
       status.textContent = 'No wallet provider found. Open Tixken inside the MetaMask app browser tab.';
@@ -647,7 +647,7 @@ function getScannerInstance() {
       await ensureSepoliaNetwork();
 
       status.textContent = 'Preparing transfer...';
-      const prepared = await postJson('/api/resale/prepare-transfer', { ticketId, buyerAddress });
+      const prepared = await postJson('/api/resale/prepare-transfer', { ticketId, buyerAddress, buyerEmail });
 
       const tx = prepared.transactions[0];
       status.textContent = 'Confirm the transfer in your wallet...';

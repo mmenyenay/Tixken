@@ -113,10 +113,38 @@ async function getTokenInfo(tokenSymbol) {
   return res.data;
 }
 
+async function whitelistBuyer(tokenSymbol, buyerAddress, buyerEmail) {
+  const preparePayload = {
+    chainId: process.env.CHAIN_ID,
+    method: 'whitelist',
+    signerAddress: process.env.SIGNER_ADDRESS,
+    tokenSymbol,
+    userToWhitelist: [{
+      investorAddress: buyerAddress,
+      investorEmail: buyerEmail,
+      whitelistStatus: true
+    }]
+  };
+
+  const prepareRes = await client.post('/prepare-transactions', preparePayload);
+  const { txId, transactions } = prepareRes.data;
+  const txList = Array.isArray(transactions) ? transactions : [transactions];
+
+  const signedTransactions = [];
+  for (const tx of txList) {
+    const signed = await wallet.signTransaction(tx);
+    signedTransactions.push(signed);
+  }
+
+  await client.post('/send-transactions', { txId, signedTransactions });
+  await waitForConfirmation(txId);
+}
+
 module.exports = {
   runTransaction,
   waitForConfirmation,
   mintWithWhitelist,
+  whitelistBuyer,
   getTransactionStatus,
   getWhitelistStatus,
   getTokenInfo

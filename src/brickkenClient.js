@@ -126,6 +126,8 @@ async function whitelistBuyer(tokenSymbol, buyerAddress, buyerEmail) {
     }]
   };
 
+  console.log('[whitelistBuyer] payload:', JSON.stringify(preparePayload));
+
   const prepareRes = await client.post('/prepare-transactions', preparePayload);
   const { txId, transactions } = prepareRes.data;
   const txList = Array.isArray(transactions) ? transactions : [transactions];

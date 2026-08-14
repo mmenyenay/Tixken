@@ -526,6 +526,11 @@ function getScannerInstance() {
   async function confirmEntry(ticketId) {
     const status = document.getElementById('scan-status');
     status.className = 'status-line';
+    if (!window.ethereum) {
+      status.className = 'status-line error';
+      status.textContent = 'No wallet provider found. Open Tixken inside the MetaMask app browser tab.';
+      return;
+    }
     try {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       await ensureSepoliaNetwork();
@@ -554,7 +559,8 @@ function getScannerInstance() {
       }
     } catch (err) {
       status.className = 'status-line error';
-      status.textContent = err.message;
+      status.textContent = (err && err.stack) ? err.stack : String((err && err.message) || err);
+      console.error('[confirmEntry] failed for ticketId', ticketId, err);
     }
   }
 

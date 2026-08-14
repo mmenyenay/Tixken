@@ -560,7 +560,7 @@ function getScannerInstance() {
     } catch (err) {
       status.className = 'status-line error';
       status.textContent = (err && err.stack) ? err.stack : String((err && err.message) || err);
-      console.error('[confirmEntry] failed for ticketId', ticketId, err);
+      console.error('[confirmEntry] failed for ticketId', ticketId, 'code:', err && err.code, err);
     }
   }
 

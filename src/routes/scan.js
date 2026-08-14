@@ -26,6 +26,13 @@ router.post('/scan/prepare', async (req, res) => {
 
     res.json(prepared);
   } catch (err) {
+    console.error('[scan/prepare] failed for ticketId', ticketId);
+    console.error('[scan/prepare] message:', err.message);
+    if (err.response) {
+      console.error('[scan/prepare] response status:', err.response.status);
+      console.error('[scan/prepare] response data:', JSON.stringify(err.response.data));
+    }
+    console.error('[scan/prepare] stack:', err.stack);
     res.status(500).json({ error: err.response ? err.response.data : err.message });
   }
 });
@@ -52,6 +59,13 @@ router.post('/scan/confirm', async (req, res) => {
 
     res.json({ status: 'entry confirmed', confirmResult });
   } catch (err) {
+    console.error('[scan/confirm] failed for ticketId', ticketId, 'txId', txId, 'txHash', txHash);
+    console.error('[scan/confirm] message:', err.message);
+    if (err.response) {
+      console.error('[scan/confirm] response status:', err.response.status);
+      console.error('[scan/confirm] response data:', JSON.stringify(err.response.data));
+    }
+    console.error('[scan/confirm] stack:', err.stack);
     res.status(500).json({ error: err.response ? err.response.data : err.message });
   }
 });

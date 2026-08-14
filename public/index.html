@@ -386,23 +386,30 @@
 <script>
 async function ensureSepoliaNetwork() {
   try {
-    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] });
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
   } catch (switchError) {
     if (switchError.code === 4902) {
       await window.ethereum.request({
-        method: "wallet_addEthereumChain",
+        method: 'wallet_addEthereumChain',
         params: [{
-          chainId: "0xaa36a7",
-          chainName: "Sepolia",
-          nativeCurrency: { name: "SepoliaETH", symbol: "SEP", decimals: 18 },
-          rpcUrls: ["https://sepolia.infura.io/v3/"],
-          blockExplorerUrls: ["https://sepolia.etherscan.io"]
+          chainId: '0xaa36a7',
+          chainName: 'Sepolia',
+          nativeCurrency: { name: 'SepoliaETH', symbol: 'SEP', decimals: 18 },
+          rpcUrls: ['https://sepolia.infura.io/v3/'],
+          blockExplorerUrls: ['https://sepolia.etherscan.io']
         }]
       });
     } else {
       throw switchError;
     }
   }
+}
+
+let html5QrcodeScanner = null;
+function getScannerInstance() {
+    html5QrcodeScanner = new Html5Qrcode('scan-video');
+  }
+  return html5QrcodeScanner;
 }
 </script>
 
@@ -428,7 +435,6 @@ async function ensureSepoliaNetwork() {
       body: JSON.stringify(body)
     });
     const data = await res.json();
-    if (!res.ok) {
       const message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
       throw new Error(message || 'Request failed');
     }
@@ -439,7 +445,6 @@ async function ensureSepoliaNetwork() {
     const status = document.getElementById('create-status');
     status.className = 'status-line';
     status.textContent = 'Tokenizing on the sandbox, this can take a moment...';
-
     try {
       const data = await postJson('/api/events', {
         name: document.getElementById('ev-name').value,
@@ -460,7 +465,6 @@ async function ensureSepoliaNetwork() {
     const status = document.getElementById('claim-status');
     status.className = 'status-line';
     status.textContent = 'Minting your ticket...';
-
     try {
       const data = await postJson('/api/tickets', {
         eventId: document.getElementById('tk-event').value,
@@ -499,14 +503,32 @@ async function ensureSepoliaNetwork() {
     if (ticketId) await confirmEntry(ticketId);
   });
 
+  document.getElementById('qr-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const status = document.getElementById('scan-status');
+    status.className = 'status-line';
+    status.textContent = 'Reading QR image...';
+    try {
+      const qrRegion = getScannerInstance();
+      const decodedText = await qrRegion.scanFile(file, true);
+      try {
+        const payload = JSON.parse(decodedText);
+        confirmEntry(payload.ticketId);
+      } catch (err) {
+        confirmEntry(decodedText);
+      }
+    } catch (err) {
+      status.className = 'status-line error';
+      status.textContent = 'Could not read a QR code in that image';
+    }
+  });
+
   async function confirmEntry(ticketId) {
     const status = document.getElementById('scan-status');
     status.className = 'status-line';
-
     try {
-      if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
       await window.ethereum.request({ method: 'eth_requestAccounts' });
-    await ensureSepoliaNetwork();
+      await ensureSepoliaNetwork();
 
       status.textContent = 'Preparing entry check...';
       const prepared = await postJson('/api/scan/prepare', { ticketId });
@@ -537,15 +559,13 @@ async function ensureSepoliaNetwork() {
   }
 
   let scannerStarted = false;
-  function startScanner() {
+  async function startScanner() {
     if (scannerStarted) return;
     scannerStarted = true;
-
     const qrRegion = getScannerInstance();
     Html5Qrcode.getCameras().then((cameras) => {
-      if (!cameras.length) return;
-          const backCamera = cameras.find((c) => /back|rear|environment/i.test(c.label));
-          const chosenCamera = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+      const backCamera = cameras.find((c) => /back|rear|environment/i.test(c.label));
+      const chosenCamera = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
       qrRegion.start(
         chosenCamera,
         { fps: 10, qrbox: 220 },
@@ -569,7 +589,6 @@ async function ensureSepoliaNetwork() {
     try {
       const res = await fetch('/api/leaderboard');
       const entries = await res.json();
-      if (!entries.length) {
         list.className = 'empty';
         list.textContent = 'No entries yet';
         return;
@@ -586,11 +605,15 @@ async function ensureSepoliaNetwork() {
     }
   }
 
+  async function getWalletAddress() {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    return accounts[0];
+  }
+
   document.getElementById('rs-list-btn').addEventListener('click', async () => {
     const status = document.getElementById('rs-list-status');
     status.className = 'status-line';
     status.textContent = 'Listing...';
-
     try {
       const data = await postJson('/api/resale/list', {
         ticketId: document.getElementById('rs-ticket').value,
@@ -610,14 +633,11 @@ async function ensureSepoliaNetwork() {
     const ticketId = document.getElementById('rs-ticket').value;
     const buyerAddress = document.getElementById('rs-buyer-address').value;
     const buyerEmail = document.getElementById('rs-buyer-email').value;
-
     status.className = 'status-line';
     status.textContent = 'Connecting wallet...';
-
     try {
-      if (!window.ethereum) throw new Error('No wallet found, install MetaMask');
       await window.ethereum.request({ method: 'eth_requestAccounts' });
-    await ensureSepoliaNetwork();
+      await ensureSepoliaNetwork();
 
       status.textContent = 'Preparing transfer...';
       const prepared = await postJson('/api/resale/prepare-transfer', { ticketId, buyerAddress });
@@ -632,11 +652,8 @@ async function ensureSepoliaNetwork() {
 
       status.textContent = 'Confirming with Brickken...';
       await postJson('/api/resale/send-transfer', {
-        ticketId,
-        buyerAddress,
-        buyerEmail,
-        txId: prepared.txId,
-        txHash
+        ticketId, buyerAddress, buyerEmail,
+        txId: prepared.txId, txHash
       });
 
       status.className = 'status-line ok';
@@ -646,14 +663,6 @@ async function ensureSepoliaNetwork() {
       status.textContent = err.message;
     }
   });
-
-  async function getWalletAddress() {
-    if (!window.ethereum) return null;
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    await ensureSepoliaNetwork();
-    return accounts[0];
-  }
 </script>
-
 </body>
-  </html>
+</html>

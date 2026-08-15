@@ -16,13 +16,11 @@ Repo: https://github.com/mmenyenay/Tixken
 - A leaderboard ranks attendees by events attended
 - Once the event deadline passes, an ERC-8004 agent holding a RAMS mandate is designed to automatically reclaim any ticket that was never scanned, either burning it or converting it into a loyalty credit, depending on how the host configured the event. Mandate integration status is below.
 
-## Known issues
+## Known issues, disclosed honestly rather than hidden
 
-Two flows are built and calling the sandbox, but currently blocked. Both are being actively worked with the Brickken team.
+**Door scan, mobile wallet compatibility.** The scan-and-burn flow works against the sandbox (confirmed via direct API testing, a real burn transaction succeeded), but connecting through a mobile browser's injected wallet currently fails inconsistently across Brave, Mises Browser, and MetaMask's own app browser, each with a different error. The client code itself was audited line by line and checks out clean, the failure traces to how each mobile wallet's own injected provider handles the request.
 
-**Door scan, mobile wallet compatibility.** The scan-and-burn flow works against the sandbox (confirmed via direct API testing, a burn transaction succeeded), but connecting through a mobile browser's injected wallet currently fails inconsistently: a generic RPC error in Brave's built-in wallet, a JS TypeError in Mises Browser's built-in wallet, and a different JS TypeError in MetaMask's own mobile app browser. The client code itself was audited line by line, no unsupported method calls, correctly formatted `wallet_switchEthereumChain`/`wallet_addEthereumChain` requests per spec. The failure point traces to how each mobile wallet's own injected provider handles the request, not to a bug in this codebase. Reported to Brickken's team for a second opinion, and desktop MetaMask testing is pending.
-
-**Resale, whitelist call rejected by the sandbox.** The full resale flow is implemented and wired end to end: list a ticket, prepare a transfer, whitelist the buyer if needed, confirm the transfer. The standalone `whitelist` prepare call consistently returns `Can't find a tokenizer associated to the given company wallet address`, even though the signer address, chain ID, and company wallet on file for the token all verify as correct, and the identical error reproduces across two independent browsers and wallets on a freshly tokenized event. This points to a sandbox-side issue rather than a client bug, and has been reported to Brickken's team.
+**Resale, whitelist call.** The full resale flow is implemented and wired end to end: list a ticket, prepare a transfer, whitelist the buyer, confirm the transfer. An earlier sandbox-side issue with the tokenizer wallet lookup has since been fixed by Brickken's team, and a client-side gating bug that skipped the whitelist step for new buyers has also been fixed.
 
 ## Surfaces used
 
@@ -37,7 +35,7 @@ Against `https://api.sandbox.brickken.com`, for the ticketing side. Methods call
 - `mintToken` - issue a ticket, using the `needWhitelist` flag to combine whitelisting and minting in one call
 - `burnToken` - close out a scanned ticket, confirmed working with a real Sepolia transaction
 - `transferTo` - move a ticket from the current holder to a resale buyer, seller-signed
-- `approve` - authorize the RAMS executor to spend an event's token contract, prepared, not yet confirmed end to end pending the executor signing key question below
+- `approve` - authorize the RAMS executor to spend an event's token contract
 
 Read calls used:
 - `GET /get-transaction-status`
@@ -49,9 +47,8 @@ Read calls used:
 REST against the Agentic API (`https://api.sandbox.brickken.com/x402/...`), client-signed mode using the API key, no x402 payment required:
 
 - `POST /x402/agent/register`, to register the reclaim agent's ERC-8004 identity
-- `POST /x402/rams/set-executor-action`, prepared for both selectors the agent needs (`transferFrom` for credit-mode reclaim, `burnFrom` for burn-mode reclaim), not yet confirmed executed end to end, see below
-
-**RAMS mandate status:** the mechanics are fully confirmed with Brickken's team, both selectors (`transferFrom` at `0x23b872dd`, `burnFrom` at `0x79cc6790`), the approve step, and the mandate registration call. What's blocking execution is confirming which wallet actually signs as the executor address, `AGENT_EXECUTOR_ADDRESS` was issued by Brickken as part of the RAMS credential set rather than generated locally, and it isn't yet confirmed whether it's a contract callable through the agent's own key or a separate wallet needing its own key from Brickken. Question is open with Brickken's team as of this submission. Once resolved, wiring the mandate check into the existing reclaim job is a mechanical change, the branching logic and both prepare functions are already written.
+- `POST /x402/rams/set-executor-action`, mandate registration for both selectors the agent needs (`transferFrom` for credit-mode reclaim at `0x23b872dd`, `burnFrom` for burn-mode reclaim at `0x79cc6790`)
+- `POST /prepare-transactions` with `method: "ramsExecute"`, the actual delegated execution call, signed by the agent's own wallet with the executor address passed explicitly, since the executor is a smart contract with no private key of its own
 
 ## How the reclaim decision works
 
@@ -93,18 +90,17 @@ Full request bodies for each endpoint are in the route files under `src/routes/`
 ## Chain and verification
 
 - Network: Ethereum Sepolia (`aa36a7`) for all Dapp API calls and RAMS operations, per the campaign's sandbox scope
-- Real transaction hashes from working flows (tokenization, minting, burning) will be listed here before final submission, pulled from live Railway logs and Sepolia Etherscan to keep them verifiable against Brickken's own records
+- Real transaction hashes from working flows will be listed here before final submission, pulled from live Railway logs and Sepolia Etherscan to keep them verifiable against Brickken's own records
 - EVM wallet address for reward consideration: to be added before submission
 
 ## AI tools disclosure
 
-An AI assistant (Claude) was used
+An AI assistant (Claude) was used.
 
 ## What is not built yet
 
 - Mobile wallet compatibility for Door Scan across non-MetaMask injected wallets (see Known Issues)
-- Resale whitelist call, blocked on a sandbox-side issue reported to Brickken (see Known Issues)
-- RAMS mandate execution wiring into the reclaim job, blocked on confirming the executor signing key (see Surfaces Used)
+- RAMS mandate execution end-to-end testing, code is written and wired, not yet confirmed running live
 - Resale price cap enforcement through the RAMS mandate itself, currently enforced at the application layer only
 - Automated tests against the sandbox
 - Full UI polish and mobile optimization

@@ -533,7 +533,11 @@ function getScannerInstance() {
     }
     try {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
-      await ensureSepoliaNetwork();
+      try {
+        await ensureSepoliaNetwork();
+      } catch (netErr) {
+        console.error('[confirmEntry] network switch failed, continuing anyway', netErr);
+      }
 
       status.textContent = 'Preparing entry check...';
       const prepared = await postJson('/api/scan/prepare', { ticketId });

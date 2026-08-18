@@ -151,3 +151,79 @@ module.exports = {
   getWhitelistStatus,
   getTokenInfo
 };
+
+async function setExecutorAction(selector, hasAmount, amountIndex) {
+  const res = await client.post('/x402/rams/set-executor-action', {
+    chainId: process.env.CHAIN_ID,
+    signerAddress: process.env.SIGNER_ADDRESS,
+    executorAddress: process.env.AGENT_EXECUTOR_ADDRESS,
+    selector,
+    supported: true,
+    hasAmount,
+    amountIndex
+  });
+  return res.data;
+}
+
+async function approveExecutor(tokenSymbol, amount) {
+  return runTransaction('approve', {
+    signerAddress: process.env.SIGNER_ADDRESS,
+    tokenSymbol,
+    spender: process.env.AGENT_EXECUTOR_ADDRESS,
+    amount
+  });
+}
+
+module.exports.setExecutorAction = setExecutorAction;
+module.exports.approveExecutor = approveExecutor;
+
+async function ramsExecuteTransfer(tokenAddress, fromAddress, toAddress, amount) {
+  const agentWallet = new Wallet(process.env.AGENT_PRIVATE_KEY);
+  const preparePayload = {
+    chainId: '11155111',
+    method: 'ramsExecute',
+    signerAddress: process.env.AGENT_ADDRESS,
+    executorAddress: process.env.AGENT_EXECUTOR_ADDRESS,
+    asset: tokenAddress,
+    from: fromAddress,
+    to: toAddress,
+    amount
+  };
+  const prepareRes = await client.post('/prepare-transactions', preparePayload);
+  const { txId, transactions } = prepareRes.data;
+  const txList = Array.isArray(transactions) ? transactions : [transactions];
+  const signedTransactions = [];
+  for (const tx of txList) {
+    signedTransactions.push(await agentWallet.signTransaction(tx));
+  }
+  await client.post('/send-transactions', { txId, signedTransactions });
+  await waitForConfirmation(txId);
+}
+
+async function ramsExecuteBurn(tokenAddress, principalAddress, amount) {
+  const { utils } = require('ethers');
+  const iface = new utils.Interface(['function burnFrom(address,uint256)']);
+  const data = iface.encodeFunctionData('burnFrom', [principalAddress, amount]);
+
+  const agentWallet = new Wallet(process.env.AGENT_PRIVATE_KEY);
+  const preparePayload = {
+    chainId: '11155111',
+    method: 'ramsExecute',
+    signerAddress: process.env.AGENT_ADDRESS,
+    executorAddress: process.env.AGENT_EXECUTOR_ADDRESS,
+    target: tokenAddress,
+    data
+  };
+  const prepareRes = await client.post('/prepare-transactions', preparePayload);
+  const { txId, transactions } = prepareRes.data;
+  const txList = Array.isArray(transactions) ? transactions : [transactions];
+  const signedTransactions = [];
+  for (const tx of txList) {
+    signedTransactions.push(await agentWallet.signTransaction(tx));
+  }
+  await client.post('/send-transactions', { txId, signedTransactions });
+  await waitForConfirmation(txId);
+}
+
+module.exports.ramsExecuteTransfer = ramsExecuteTransfer;
+module.exports.ramsExecuteBurn = ramsExecuteBurn;

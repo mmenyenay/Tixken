@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { runTransaction, getWhitelistStatus, whitelistBuyer } = require('../brickkenClient');
+const { runTransaction, getWhitelistStatus, whitelistBuyer, waitForWhitelistStatus } = require('../brickkenClient');
 const db = require('../store');
 const { sendTelegramAlert } = require('../notify/telegram');
 
@@ -44,6 +44,7 @@ router.post('/resale/list', (req, res) => {
 
                                                       try {
                                                           console.log('[resale] whitelisting buyer before transfer:', buyerAddress); await whitelistBuyer(event.tokenSymbol, buyerAddress, buyerEmail);
+                                                          await waitForWhitelistStatus(event.tokenSymbol, buyerAddress);
 
     const prepareResult = await runTransaction.prepareOnly('transferTo', {
                                                                 tokenSymbol: event.tokenSymbol,

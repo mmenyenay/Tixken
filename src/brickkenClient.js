@@ -227,3 +227,14 @@ async function ramsExecuteBurn(tokenAddress, principalAddress, amount) {
 
 module.exports.ramsExecuteTransfer = ramsExecuteTransfer;
 module.exports.ramsExecuteBurn = ramsExecuteBurn;
+
+async function waitForWhitelistStatus(tokenSymbol, address, maxAttempts = 10, delayMs = 3000) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await getWhitelistStatus(tokenSymbol, address);
+    if (status && status.isWhitelisted) return status;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error('Whitelist status did not confirm for ' + address + ' after ' + maxAttempts + ' attempts');
+}
+
+module.exports.waitForWhitelistStatus = waitForWhitelistStatus;

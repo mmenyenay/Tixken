@@ -41,6 +41,7 @@ router.post('/scan/prepare', async (req, res) => {
 router.post('/scan/confirm', async (req, res) => {
   const { ticketId, txId, txHash } = req.body;
   const ticket = db.get('tickets').find({ id: ticketId }).value();
+  if (!ticket) return res.status(404).json({ error: "Ticket not found" });
   const event = db.get('events').find({ id: ticket.eventId }).value();
 
   try {

@@ -404,7 +404,23 @@ async function ensureSepoliaNetwork() {
     }
   }
 }
-
+async function sendPreparedTransaction(rawTx) {
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  const account = accounts[0];
+  const hex = (v) => {
+    if (v === undefined || v === null) return undefined;
+    if (typeof v === 'string' && v.startsWith('0x')) return v;
+    return '0x' + BigInt(v).toString(16);
+  };
+  if (rawTx.from && rawTx.from.toLowerCase() !== account.toLowerCase()) {
+    console.warn('[sendPreparedTransaction] connected wallet', account, 'does not match expected signer', rawTx.from);
+  }
+  const normalized = { from: account, to: rawTx.to, data: rawTx.data };
+  if (rawTx.value !== undefined) normalized.value = hex(rawTx.value);
+  if (rawTx.gasLimit !== undefined) normalized.gas = hex(rawTx.gasLimit);
+  else if (rawTx.gas !== undefined) normalized.gas = hex(rawTx.gas);
+  return window.ethereum.request({ method: 'eth_sendTransaction', params: [normalized] });
+}
 let html5QrcodeScanner = null;
 function getScannerInstance() {
     if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode('scan-video');
@@ -545,11 +561,7 @@ function getScannerInstance() {
       const tx = prepared.transactions[0];
       status.textContent = 'Confirm in your wallet...';
 
-      const txHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [tx]
-      });
-
+          const txHash = await sendPreparedTransaction(tx);
       status.textContent = 'Confirming with Brickken...';
       await postJson('/api/scan/confirm', { ticketId, txId: prepared.txId, txHash });
 
@@ -656,10 +668,7 @@ function getScannerInstance() {
       const tx = prepared.transactions[0];
       status.textContent = 'Confirm the transfer in your wallet...';
 
-      const txHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [tx]
-      });
+          const txHash = await sendPreparedTransaction(tx);
 
       status.textContent = 'Confirming with Brickken...';
       await postJson('/api/resale/send-transfer', {

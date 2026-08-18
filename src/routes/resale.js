@@ -43,11 +43,7 @@ router.post('/resale/list', (req, res) => {
                                                     const event = db.get('events').find({ id: ticket.eventId }).value();
 
                                                       try {
-                                                          const whitelistStatus = await getWhitelistStatus(event.tokenSymbol, buyerAddress);
-    const alreadyWhitelisted = whitelistStatus.isWhitelisted;
-    if (!alreadyWhitelisted) {
-      await whitelistBuyer(event.tokenSymbol, buyerAddress, buyerEmail);
-    }
+                                                          console.log('[resale] whitelisting buyer before transfer:', buyerAddress); await whitelistBuyer(event.tokenSymbol, buyerAddress, buyerEmail);
 
     const prepareResult = await runTransaction.prepareOnly('transferTo', {
                                                                 tokenSymbol: event.tokenSymbol,

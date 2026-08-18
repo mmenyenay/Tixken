@@ -54,6 +54,7 @@ router.post('/resale/list', (req, res) => {
 
                                                                                           res.json(prepareResult);
                                                                                             } catch (err) {
+                                                                                              console.error('[resale/prepare-transfer] failed:', err.stack || err.message, err.response ? JSON.stringify(err.response.data) : '');
                                                                                                 res.status(500).json({ error: err.response ? err.response.data : err.message });
                                                                                                   }
                                                                                                   });

@@ -153,8 +153,9 @@ module.exports = {
 };
 
 async function setExecutorAction(selector, hasAmount, amountIndex) {
-  const res = await client.post('/x402/rams/set-executor-action', {
-    chainId: process.env.CHAIN_ID,
+  const signerWallet = new Wallet(process.env.SIGNER_PRIVATE_KEY);
+  const prepareRes = await client.post('/x402/rams/set-executor-action', {
+    chainId: '11155111',
     signerAddress: process.env.SIGNER_ADDRESS,
     executorAddress: process.env.AGENT_EXECUTOR_ADDRESS,
     selector,
@@ -162,14 +163,22 @@ async function setExecutorAction(selector, hasAmount, amountIndex) {
     hasAmount,
     amountIndex
   });
-  return res.data;
+  const { txId, transactions } = prepareRes.data;
+  const txList = Array.isArray(transactions) ? transactions : [transactions];
+  const signedTransactions = [];
+  for (const tx of txList) {
+    signedTransactions.push(await signerWallet.signTransaction(tx));
+  }
+  await client.post('/send-transactions', { txId, signedTransactions });
+  await waitForConfirmation(txId);
+  return { txId };
 }
 
 async function approveExecutor(tokenSymbol, amount) {
   return runTransaction('approve', {
     signerAddress: process.env.SIGNER_ADDRESS,
     tokenSymbol,
-    spender: process.env.AGENT_EXECUTOR_ADDRESS,
+    spenderAddress: process.env.AGENT_EXECUTOR_ADDRESS,
     amount
   });
 }

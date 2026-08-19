@@ -13,7 +13,7 @@ router.post('/tickets', async (req, res) => {
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
   try {
-    const mintResult = await mintWithWhitelist({
+    const mintParams = {
       tokenSymbol: event.tokenSymbol,
       signerAddress: process.env.SIGNER_ADDRESS,
       userToMint: [
@@ -24,7 +24,9 @@ router.post('/tickets', async (req, res) => {
           needWhitelist: true
         }
       ]
-    });
+    };
+    console.log('[tickets] mintWithWhitelist params:', JSON.stringify(mintParams));
+    const mintResult = await mintWithWhitelist(mintParams);
 
     const ticketId = uuidv4();
     const qrPayload = JSON.stringify({ ticketId, eventId, attendeeAddress });

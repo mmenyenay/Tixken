@@ -13,7 +13,7 @@ router.post('/events', async (req, res) => {
   }
 
   try {
-    const result = await runTransaction('newTokenization', {
+    const tokenizeParams = {
       tokenizerEmail,
       signerAddress: process.env.SIGNER_ADDRESS,
       name,
@@ -21,7 +21,9 @@ router.post('/events', async (req, res) => {
       tokenType: 'RWA_TOKEN',
       supplyCap,
       url: url || ''
-    });
+    };
+    console.log('[events] newTokenization params:', JSON.stringify(tokenizeParams));
+    const result = await runTransaction('newTokenization', tokenizeParams);
 
     const event = {
       id: uuidv4(),

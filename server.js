@@ -10,7 +10,7 @@ app.use('/api', require('./src/routes/tickets'));
 app.use('/api', require('./src/routes/scan'));
 app.use('/api', require('./src/routes/leaderboard'));
 app.use('/api', require('./src/routes/resale'));
-
+app.use('/admin', require('./src/routes/admin'));
 app.get('/', (req, res) => {
   res.send('Tixken API is running');
   });

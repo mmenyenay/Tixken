@@ -59,7 +59,7 @@ async function mintWithWhitelist(params) {
   };
 
   const prepareRes = await client.post('/prepare-transactions', preparePayload);
-  const { whitelistTx, txIdWhitelist, transactions, txId } = prepareRes.data;
+  const { whitelistTx, txIdWhitelist } = prepareRes.data;
 
   const signedWhitelist = await wallet.signTransaction(whitelistTx);
   await client.post('/send-transactions', {
@@ -67,6 +67,22 @@ async function mintWithWhitelist(params) {
     signedTransactions: [signedWhitelist]
   });
   await waitForConfirmation(txIdWhitelist);
+
+  // Re-prepare the mint step fresh here, rather than reusing the mint
+  // transaction from the original prepare call above. That original one
+  // can go stale while waiting for the whitelist tx to confirm, since
+  // Brickken signs prepared transactions with a 10 minute deadline and
+  // confirmation waits can eat into that window.
+  const mintOnlyParams = {
+    ...params,
+    userToMint: params.userToMint.map((u) => ({ ...u, needWhitelist: false }))
+  };
+  const mintPrepareRes = await client.post('/prepare-transactions', {
+    chainId: process.env.CHAIN_ID,
+    method: 'mintToken',
+    ...mintOnlyParams
+  });
+  const { transactions, txId } = mintPrepareRes.data;
 
   const signedMint = await wallet.signTransaction(transactions);
   const sendRes = await client.post('/send-transactions', {

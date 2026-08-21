@@ -68,6 +68,10 @@ async function mintWithWhitelist(params) {
   });
   await waitForConfirmation(txIdWhitelist);
 
+  const investorAddress = params.userToMint[0].investorAddress;
+  console.log('[mintWithWhitelist] waiting for whitelist status to reflect for', investorAddress);
+  await waitForWhitelistStatus(params.tokenSymbol, investorAddress);
+
   // Re-prepare the mint step fresh here, rather than reusing the mint
   // transaction from the original prepare call above. That original one
   // can go stale while waiting for the whitelist tx to confirm, since
@@ -253,9 +257,10 @@ async function ramsExecuteBurn(tokenAddress, principalAddress, amount) {
 module.exports.ramsExecuteTransfer = ramsExecuteTransfer;
 module.exports.ramsExecuteBurn = ramsExecuteBurn;
 
-async function waitForWhitelistStatus(tokenSymbol, address, maxAttempts = 10, delayMs = 3000) {
+async function waitForWhitelistStatus(tokenSymbol, address, maxAttempts = 25, delayMs = 4000) {
   for (let i = 0; i < maxAttempts; i++) {
     const status = await getWhitelistStatus(tokenSymbol, address);
+    console.log(`[waitForWhitelistStatus] attempt ${i + 1}/${maxAttempts} for ${address}:`, JSON.stringify(status));
     if (status && status.isWhitelisted) return status;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }

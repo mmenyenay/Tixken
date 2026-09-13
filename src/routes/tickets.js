@@ -28,20 +28,6 @@ router.post('/tickets', async (req, res) => {
     console.log('[tickets] mintWithWhitelist params:', JSON.stringify(mintParams));
     const mintResult = await mintWithWhitelist(mintParams);
 
-    // getTokenInfo does not return the token's own contract address, so we
-    // capture it here from the mint transaction itself, which targets the
-    // token contract directly.
-    let tokenAddress;
-    let txHash;
-    try {
-      const txResponse = mintResult.results[0].result.txResponses[0];
-      tokenAddress = txResponse.to;
-      txHash = txResponse.hash;
-      console.log('[tickets] captured tokenAddress from mint response:', tokenAddress);
-    } catch (e) {
-      console.error('[tickets] could not extract tokenAddress from mint response:', JSON.stringify(mintResult));
-    }
-
     const ticketId = uuidv4();
     const qrPayload = JSON.stringify({ ticketId, eventId, attendeeAddress });
     const qrDataUrl = await QRCode.toDataURL(qrPayload);
@@ -53,8 +39,7 @@ router.post('/tickets', async (req, res) => {
       attendeeEmail,
       status: 'issued',
       issuedAt: new Date().toISOString(),
-      tokenAddress,
-      txHash
+      txId: mintResult.txId
     };
 
     db.get('tickets').push(ticket).write();

@@ -18,7 +18,7 @@ The goal is simple:
 https://youtu.be/9_clzTAUY5U
 
 🌐 **Live application:**
-https://tixken-production.up.railway.app
+https://tixken.onrender.com
 
 💻 **Repository:**
 https://github.com/mmenyenay/Tixken

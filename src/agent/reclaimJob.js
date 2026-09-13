@@ -3,19 +3,6 @@ const db = require('../store');
 const { sendTelegramAlert } = require('../notify/telegram');
 const { sendEmail } = require('../notify/email');
 
-// RAMS mandate is now set up (transferFrom and burnFrom selectors registered,
-// executor approved). Reclaim now routes through the delegated executor
-// instead of calling the Dapp API directly with SIGNER_ADDRESS.
-
-async function getTokenContractAddress(tokenSymbol) {
-  const info = await getTokenInfo(tokenSymbol);
-  const address = info.tokenAddress || info.contractAddress || info.address || (info.token && info.token.address);
-  if (!address) {
-    throw new Error('Could not find token contract address in getTokenInfo response for ' + tokenSymbol + ': ' + JSON.stringify(info));
-  }
-  return address;
-}
-
 function toRawAmount(amount, decimals) {
   const dec = decimals === undefined || decimals === null ? 18 : Number(decimals);
   return (BigInt(amount) * (10n ** BigInt(dec))).toString();
@@ -34,12 +21,13 @@ async function reclaimExpiredTickets() {
 
     for (const ticket of expiredTickets) {
       try {
-        const tokenInfo = await getTokenInfo(event.tokenSymbol);
-        const tokenAddress = tokenInfo.tokenAddress || tokenInfo.contractAddress || tokenInfo.address || (tokenInfo.token && tokenInfo.token.address);
+        const tokenAddress = ticket.tokenAddress;
         if (!tokenAddress) {
-          throw new Error('Could not find token contract address in getTokenInfo response: ' + JSON.stringify(tokenInfo));
+          throw new Error('Ticket has no stored tokenAddress, was minted before this fix, cannot reclaim via RAMS');
         }
-        const decimals = tokenInfo.decimals !== undefined ? tokenInfo.decimals : 18;
+
+        const tokenInfo = await getTokenInfo(event.tokenSymbol);
+        const decimals = tokenInfo.allowedTokenDecimals !== undefined ? tokenInfo.allowedTokenDecimals : 18;
         const rawAmount = toRawAmount('1', decimals);
         console.log(`[reclaimJob] using tokenAddress ${tokenAddress}, decimals ${decimals}, rawAmount ${rawAmount} for ticket ${ticket.id}`);
 
